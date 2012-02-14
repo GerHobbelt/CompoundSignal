@@ -23,17 +23,22 @@
             var sigs = slice(arguments),
                 n = sigs.length,
                 binding;
+            
+            this._params = [];
+            this._signals = sigs;
+            this._resolved = false;
 
             while(n--){
                 //will register dispatch after all the listeners are
                 //executed since 1 << 31 is probably the lowest priority
-                binding = sigs[n].add(this._registerDispatch, this, 1 << 31);
-                binding.params = [n]; //use index to register params..
+                binding = sigs[n].add(
+                	(function(b) {
+                		var c = b;
+	                	return function(args) {
+	                		this._registerDispatch.apply(this, [c].concat(arguments)); 
+	                	}
+                	})(n), this, 1 << 31);
             }
-
-            this._signals = sigs;
-            this._params = [];
-            this._resolved = false;
         }
 
         CompoundSignal.prototype = _compoundProto;
@@ -48,7 +53,7 @@
         _compoundProto._registerDispatch = function(idx, args){
 
             if(!this._params[idx] || this.override){
-                this._params[idx] = slice(arguments, 1);
+                this._params[idx] = arguments[1];
             }
 
             if( this._registeredAll() && (!this._resolved || !this.unique)){
@@ -75,10 +80,17 @@
 
             //if unique it should always dispatch same parameters
             //will act like a promise...
-            params = (this._resolved && this.unique)? this._params : slice(arguments);
+            var params = (this._resolved && this.unique)? this._params : slice(arguments);
             this._resolved = true;
+            
+            var flatternedParams = [];
+            for (var i in params) {
+            	for (var l=0; l<params[i].length; l++) {
+            		flatternedParams.push(params[i][l]);
+            	}
+            }
 
-            _signalProto.dispatch.apply(this, params);
+            _signalProto.dispatch.apply(this, flatternedParams);
 
             if(this.unique){
                 this.removeAll();
