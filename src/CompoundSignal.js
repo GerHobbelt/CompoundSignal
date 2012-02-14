@@ -29,6 +29,8 @@
             this._resolved = false;
 
             while(n--){
+            	this.memorize = this.memorize || sigs[n].memorize;
+            	
                 //will register dispatch after all the listeners are
                 //executed since 1 << 31 is probably the lowest priority
                 binding = sigs[n].add(
